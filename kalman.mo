@@ -20,40 +20,101 @@ package kalman
         experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));end rigid_body_states;
 
   model mass_estimate
-      inner Modelica.Mechanics.MultiBody.World world annotation(
+      inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity)  annotation(
         Placement(visible = true, transformation(origin = {-64, 48}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
       Modelica.Mechanics.MultiBody.Forces.WorldForce force annotation(
         Placement(visible = true, transformation(origin = {-32, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Modelica.Mechanics.MultiBody.Parts.Body body1 annotation(
+  Modelica.Mechanics.MultiBody.Parts.Body body1(m = 1)  annotation(
   
-        Placement(visible = true, transformation(origin = {10, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+        Placement(visible = true, transformation(origin = {10, 12}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Modelica.Mechanics.MultiBody.Sensors.AbsoluteVelocity v annotation(
         Placement(visible = true, transformation(origin = {14, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Modelica.Mechanics.MultiBody.Sensors.AbsolutePosition p annotation(
         Placement(visible = true, transformation(origin = {-8, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
-  kalman.blocks.noise_sampled noise_sampled1[3](variance = 2.0)  annotation(
+  blocks.noise_sampled noise_sampled1[3](samplePeriod = 0.5, variance = {2.0, 2.0, 2.0})  annotation(
         Placement(visible = true, transformation(origin = {26, -70}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Modelica.Blocks.Sources.Sine sine1[3](amplitude = {0, 0, 1.0}, freqHz = {1.0, 1.0, 0.1})  annotation(
         Placement(visible = true, transformation(origin = {-82, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  blocks.kalman kalman1[3] annotation(
-        Placement(visible = true, transformation(origin = {68, -50}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  blocks.kalman kalman(dT = 1.0)  annotation(
+        Placement(visible = true, transformation(origin = {56, -4}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   equation
-      connect(noise_sampled1.y, kalman1.u) annotation(
-        Line(points = {{36, -70}, {40, -70}, {40, -50}, {56, -50}, {56, -50}}, color = {0, 0, 127}));
+      connect(v.v, kalman.z) annotation(
+        Line(points = {{14, -36}, {14, -36}, {14, -46}, {40, -46}, {40, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(sine1[3].y, kalman.u[1]) annotation(
+        Line(points = {{-70, 8}, {-66, 8}, {-66, -6}, {32, -6}, {32, 2}, {48, 2}, {48, 2}}, color = {0, 0, 127}, thickness = 0.5));
+//connect(sine1[3].y, stateSpace1.u[1]) annotation(
+//  Line(points = {{-70, 8}, {-50, 8}, {-50, -14}, {60, -14}}, color = {0, 0, 127}));
+      connect(body1.frame_a, p.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -16}}, color = {95, 95, 95}));
+      connect(body1.frame_a, v.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -8}, {14, -8}, {14, -16}}, color = {95, 95, 95}));
+      connect(force.frame_b, body1.frame_a) annotation(
+        Line(points = {{-22, 8}, {-11, 8}, {-11, 12}, {0, 12}}, color = {95, 95, 95}));
       connect(v.v, noise_sampled1.u) annotation(
         Line(points = {{14, -38}, {14, -50}, {-4, -50}, {-4, -70}, {17, -70}}, color = {0, 0, 127}));
       connect(sine1.y, force.force) annotation(
         Line(points = {{-70, 8}, {-44, 8}, {-44, 8}, {-44, 8}}, color = {0, 0, 127}));
-      connect(force.frame_b, body1.frame_a) annotation(
-        Line(points = {{-22, 8}, {0, 8}, {0, 8}, {0, 8}}, color = {95, 95, 95}));
-      connect(body1.frame_a, v.frame_a) annotation(
-        Line(points = {{0, 8}, {-8, 8}, {-8, -8}, {14, -8}, {14, -16}, {14, -16}}, color = {95, 95, 95}));
-      connect(body1.frame_a, p.frame_a) annotation(
-        Line(points = {{0, 8}, {-8, 8}, {-8, -16}, {-8, -16}}, color = {95, 95, 95}));
-    
-    annotation(
+      annotation(
         experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));
   end mass_estimate;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -243,11 +304,201 @@ https://en.wikipedia.org/wiki/List_of_random_number_generators
 </html>"));
     end gauss_noise;
 
-    model kalman
-      extends Modelica.Blocks.Interfaces.SISO;
+model kalman "Kalman Filter for Modelica"
+  //parameter Integer nz = 1 "number of states";
+  parameter Real dT=1.0 "sample period";
+  Modelica.Blocks.Interfaces.RealVectorInput u[nu] "input of control vector" annotation(
+    Placement(visible = true, transformation(origin = {-92, 68}, extent = {{-12, -12}, {12, 12}}, rotation = 0), iconTransformation(origin = {-84, 58}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealVectorInput z[nz] "input of measurements)" annotation(
+    Placement(visible = true, transformation(origin = {-91, -1}, extent = {{-13, -13}, {13, 13}}, rotation = 0), iconTransformation(origin = {-84, 0}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealOutput y[ny] annotation(
+    Placement(visible = true, transformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  parameter Real A[:, size(A, 1)]=[1, dT; 0, 1]
+    "Matrix A of state space model (e.g., A=[1, 0; 0, 1])";
+  parameter Real B[size(A, 1), :]=[dT*dT*0.5; dT]
+    "Matrix B of state space model (e.g., B=[1; 1])";
+  parameter Real C[:, size(A, 1)]=[1, 0]
+    "Matrix C of state space model (e.g., C=[1, 1])";
+  parameter Real D[size(C, 1), size(B, 2)]=zeros(size(C, 1), size(B, 2))
+    "Matrix D of state space model";
+  parameter Real sigma_u = 0.1;
+  parameter Real Q[nx,nx]=B*transpose(B)*sigma_u*sigma_u "process covariance"; 
+  Real P[nx,nx](start=identity(nx)) "State Covariance";
+  parameter Real H "measurement function";
+Modelica.Blocks.Discrete.StateSpace stateSpace(A = A, B = B, C = C, D = D, samplePeriod = dT)  annotation(
+    Placement(visible = true, transformation(origin = {-6, 28}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+protected
+  parameter Integer nz = 3 "number of states";
+  parameter Integer nu = size(B, 2);
+  parameter Integer nx = size(A, 1) "number of states";
+  parameter Integer ny = size(C, 1) "number of outputs";
+equation
+  connect(stateSpace.y, y) annotation(
+    Line(points = {{6, 28}, {26, 28}, {26, 0}, {94, 0}, {94, 0}}, color = {0, 0, 127}));
+  connect(u, stateSpace.u) annotation(
+    Line(points = {{-92, 68}, {-62, 68}, {-62, 28}, {-18, 28}, {-18, 28}}, color = {0, 0, 127}));
+//prediction
+when stateSpace.sampleTrigger then
+  P = A*pre(P)*transpose(A) + Q "State Covariance prediction";
+    end when;
+  annotation(
+    Icon(graphics = {Text(origin = {27, -31}, lineColor = {144, 149, 7}, fillColor = {222, 222, 222}, extent = {{-83, 95}, {55, -33}}, textString = "K", textStyle = {TextStyle.Bold}), Rectangle(origin = {0, 2}, extent = {{-84, 82}, {84, -82}}), Text(origin = {-48, 13}, extent = {{-20, 9}, {20, -31}}, textString = "z"), Text(origin = {-48, 71}, extent = {{-20, 9}, {20, -31}}, textString = "u")}, coordinateSystem(initialScale = 0.1)),
+        Documentation(info = "<html><head></head><body>
+<pre style=\"margin-top: 0px; margin-bottom: 0px;\"><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\">implementation according to:</span></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\"><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\"><br></span></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\"><!--StartFragment--><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\">https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python/blob/master/06-Multivariate-Kalman-Filters.ipynb</span><!--EndFragment--></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\"><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\"><br></span></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\">
+
+<pre style=\"margin-top: 0px; margin-bottom: 0px;\"><!--StartFragment--><span style=\"font-family: 'DejaVu Sans Mono'; font-size: 12pt;\">  </span><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#009600;\">//https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.cont2discrete.html</span><!--EndFragment--></pre></pre></body></html>"));
+end kalman;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    model kalman_continuos
+      //https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.cont2discrete.html
+      //parameter Integer nz = 1 "number of states";
+      Modelica.Blocks.Interfaces.RealVectorInput u[nu] "input of control vector" annotation(
+        Placement(visible = true, transformation(origin = {-92, 68}, extent = {{-12, -12}, {12, 12}}, rotation = 0), iconTransformation(origin = {-84, 58}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
+      Modelica.Blocks.Interfaces.RealVectorInput z[nz] "input of measurements)" annotation(
+        Placement(visible = true, transformation(origin = {-91, -1}, extent = {{-13, -13}, {13, 13}}, rotation = 0), iconTransformation(origin = {-84, 0}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
+      Modelica.Blocks.Interfaces.RealOutput y[ny] annotation(
+        Placement(visible = true, transformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      parameter Real A[:, size(A, 1)]=[0, 1; 0, 0]
+        "Matrix A of state space model (e.g., A=[1, 0; 0, 1])";
+      parameter Real B[size(A, 1), :]=[0; 1]
+        "Matrix B of state space model (e.g., B=[1; 1])";
+      parameter Real C[:, size(A, 1)]=[1, 0]
+        "Matrix C of state space model (e.g., C=[1, 1])";
+      parameter Real D[size(C, 1), size(B, 2)]=zeros(size(C, 1), size(B, 2))
+        "Matrix D of state space model";
+  Modelica.Blocks.Continuous.StateSpace stateSpace1(A=A, B=B, C=C, D=D) annotation(
+        Placement(visible = true, transformation(origin = {0, 24}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+    protected
+      parameter Integer nz = 3 "number of states";
+      parameter Integer nu = size(B, 2);
+      parameter Integer nx = size(A, 1) "number of states";
+      parameter Integer ny = size(C, 1) "number of outputs";
+    equation
+      connect(stateSpace1.y, y) annotation(
+        Line(points = {{12, 24}, {44, 24}, {44, 2}, {94, 2}, {94, 0}}, color = {0, 0, 127}));
+      connect(u, stateSpace1.u) annotation(
+        Line(points = {{-92, 68}, {-64, 68}, {-64, 24}, {-12, 24}, {-12, 24}}, color = {0, 0, 127}));
+//prediction
+    
       annotation(
-        Icon(graphics = {Text(origin = {11, -31}, lineColor = {144, 149, 7}, fillColor = {222, 222, 222}, extent = {{-83, 95}, {55, -33}}, textString = "K", textStyle = {TextStyle.Bold})}));
-    end kalman;
+        Icon(graphics = {Text(origin = {27, -31}, lineColor = {144, 149, 7}, fillColor = {222, 222, 222}, extent = {{-83, 95}, {55, -33}}, textString = "K", textStyle = {TextStyle.Bold}), Rectangle(origin = {0, 2}, extent = {{-84, 82}, {84, -82}}), Text(origin = {-48, 13}, extent = {{-20, 9}, {20, -31}}, textString = "z"), Text(origin = {-48, 71}, extent = {{-20, 9}, {20, -31}}, textString = "u")}, coordinateSystem(initialScale = 0.1)));
+    end kalman_continuos;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   annotation(dateModified = "2014-04-17 11:12:16Z");
