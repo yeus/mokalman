@@ -38,8 +38,10 @@ package kalman
   blocks.kalman kalman(dT = 1.0)  annotation(
         Placement(visible = true, transformation(origin = {56, -4}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   equation
-      connect(v.v, kalman.z) annotation(
-        Line(points = {{14, -36}, {14, -36}, {14, -46}, {40, -46}, {40, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(p.r[3], kalman.z[1]) annotation(
+        Line(points = {{-8, -36}, {-6, -36}, {-6, -40}, {36, -40}, {36, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(v.v[3], kalman.z[2]) annotation(
+        Line(points = {{14, -36}, {14, -36}, {14, -44}, {40, -44}, {40, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
       connect(sine1[3].y, kalman.u[1]) annotation(
         Line(points = {{-70, 8}, {-66, 8}, {-66, -6}, {32, -6}, {32, 2}, {48, 2}, {48, 2}}, color = {0, 0, 127}, thickness = 0.5));
 //connect(sine1[3].y, stateSpace1.u[1]) annotation(
@@ -57,6 +59,8 @@ package kalman
       annotation(
         experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));
   end mass_estimate;
+
+
 
 
 
@@ -305,13 +309,13 @@ https://en.wikipedia.org/wiki/List_of_random_number_generators
     end gauss_noise;
 
 model kalman "Kalman Filter for Modelica"
-  //parameter Integer nz = 1 "number of states";
+  import Modelica.Math.Matrices.*;
   parameter Real dT=1.0 "sample period";
   Modelica.Blocks.Interfaces.RealVectorInput u[nu] "input of control vector" annotation(
     Placement(visible = true, transformation(origin = {-92, 68}, extent = {{-12, -12}, {12, 12}}, rotation = 0), iconTransformation(origin = {-84, 58}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealVectorInput z[nz] "input of measurements)" annotation(
     Placement(visible = true, transformation(origin = {-91, -1}, extent = {{-13, -13}, {13, 13}}, rotation = 0), iconTransformation(origin = {-84, 0}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
-  Modelica.Blocks.Interfaces.RealOutput y[ny] annotation(
+  Modelica.Blocks.Interfaces.RealOutput y[nx] annotation(
     Placement(visible = true, transformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   parameter Real A[:, size(A, 1)]=[1, dT; 0, 1]
     "Matrix A of state space model (e.g., A=[1, 0; 0, 1])";
@@ -324,22 +328,35 @@ model kalman "Kalman Filter for Modelica"
   parameter Real sigma_u = 0.1;
   parameter Real Q[nx,nx]=B*transpose(B)*sigma_u*sigma_u "process covariance"; 
   Real P[nx,nx](start=identity(nx)) "State Covariance";
-  parameter Real H "measurement function";
-Modelica.Blocks.Discrete.StateSpace stateSpace(A = A, B = B, C = C, D = D, samplePeriod = dT)  annotation(
-    Placement(visible = true, transformation(origin = {-6, 28}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  parameter Real H[nx,nz]=[1,0;0,1] "measurement function";
+  Real x[nx] "state";
+  Real xp[nx] "prior state";
+  Real K[nx,nx] "Kalman Gain";
+  parameter Real R[nz,nz]=[0.5,0;0,0.5] "Noise Covariance (corresponding to z)";
+  Real S[nz,nz] "system uncertainty ";
 protected
-  parameter Integer nz = 3 "number of states";
+  parameter Integer nz = 2 "number of measurements";
   parameter Integer nu = size(B, 2);
   parameter Integer nx = size(A, 1) "number of states";
   parameter Integer ny = size(C, 1) "number of outputs";
-equation
-  connect(stateSpace.y, y) annotation(
-    Line(points = {{6, 28}, {26, 28}, {26, 0}, {94, 0}, {94, 0}}, color = {0, 0, 127}));
-  connect(u, stateSpace.u) annotation(
-    Line(points = {{-92, 68}, {-62, 68}, {-62, 28}, {-18, 28}, {-18, 28}}, color = {0, 0, 127}));
-//prediction
-when stateSpace.sampleTrigger then
-  P = A*pre(P)*transpose(A) + Q "State Covariance prediction";
+  parameter Real startTime = 1.0;
+  protected output Boolean sampleTrigger "True, if sample time instant";
+  protected output Boolean firstTrigger "Rising edge signals first sample";
+equation 
+  sampleTrigger = sample(startTime, dT);
+ algorithm
+  when sampleTrigger then
+  firstTrigger := time <= startTime + 0.5 * dT;
+  //prediction
+     xp := A*pre(x) + B*u;
+     //y := C*pre(x) + D*u;
+     P := A*pre(P)*transpose(A) + Q "State Covariance prediction";
+  //measurement update
+     y := z - H * xp;// residual
+     S := H*P*transpose(H)+R;
+     K := P*transpose(H)*inv(S);
+     x := xp + K*y; //state update
+     P := (identity(nx) - K*H)*P;  //update of covariance
     end when;
   annotation(
     Icon(graphics = {Text(origin = {27, -31}, lineColor = {144, 149, 7}, fillColor = {222, 222, 222}, extent = {{-83, 95}, {55, -33}}, textString = "K", textStyle = {TextStyle.Bold}), Rectangle(origin = {0, 2}, extent = {{-84, 82}, {84, -82}}), Text(origin = {-48, 13}, extent = {{-20, 9}, {20, -31}}, textString = "z"), Text(origin = {-48, 71}, extent = {{-20, 9}, {20, -31}}, textString = "u")}, coordinateSystem(initialScale = 0.1)),
@@ -348,6 +365,70 @@ when stateSpace.sampleTrigger then
 
 <pre style=\"margin-top: 0px; margin-bottom: 0px;\"><!--StartFragment--><span style=\"font-family: 'DejaVu Sans Mono'; font-size: 12pt;\">  </span><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#009600;\">//https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.cont2discrete.html</span><!--EndFragment--></pre></pre></body></html>"));
 end kalman;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
