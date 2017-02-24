@@ -67,6 +67,53 @@ package kalman
         experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));
   end mass_estimate;
 
+    model simple_tracking
+      inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity) annotation(
+        Placement(visible = true, transformation(origin = {-64, 48}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Mechanics.MultiBody.Forces.WorldForce force annotation(
+        Placement(visible = true, transformation(origin = {-32, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Mechanics.MultiBody.Parts.Body body1(m = 1) annotation(
+        Placement(visible = true, transformation(origin = {10, 12}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Mechanics.MultiBody.Sensors.AbsoluteVelocity v annotation(
+        Placement(visible = true, transformation(origin = {14, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
+      Modelica.Mechanics.MultiBody.Sensors.AbsolutePosition p annotation(
+        Placement(visible = true, transformation(origin = {-8, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
+      blocks.noise_sampled noise_sampled1[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0}) annotation(
+        Placement(visible = true, transformation(origin = {26, -70}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Blocks.Sources.Sine sine1[3](amplitude = {0, 0, 1.0}, freqHz = {1.0, 1.0, 0.1}) annotation(
+        Placement(visible = true, transformation(origin = {-82, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      parameter Real sigma_u = 0.1;
+      parameter Real dT = 0.1;
+      parameter Real[2, 1] B = [dT * dT * 0.5; dT];
+      blocks.kalman kalman(A = [1, dT; 0, 1], B = B, H = [1, 0; 0, 1], Q = B * transpose(B) * sigma_u * sigma_u, R = [0.5, 0; 0, 0.5], dT = dT, sigma_u = sigma_u) annotation(
+        Placement(visible = true, transformation(origin = {56, -4}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      blocks.noise_sampled noise_sampled2[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0}) annotation(
+        Placement(visible = true, transformation(origin = {27, -45}, extent = {{-7, -7}, {7, 7}}, rotation = 0)));
+    equation
+      connect(p.r, noise_sampled2.u) annotation(
+        Line(points = {{-8, -36}, {-8, -36}, {-8, -46}, {20, -46}, {20, -44}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(noise_sampled2[3].y, kalman.z[1]) annotation(
+        Line(points = {{34, -44}, {36, -44}, {36, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(noise_sampled1[3].y, kalman.z[2]) annotation(
+        Line(points = {{36, -70}, {40, -70}, {40, -4}, {46, -4}, {46, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(sine1[3].y, kalman.u[1]) annotation(
+        Line(points = {{-70, 8}, {-66, 8}, {-66, -6}, {32, -6}, {32, 2}, {48, 2}, {48, 2}}, color = {0, 0, 127}, thickness = 0.5));
+//connect(sine1[3].y, stateSpace1.u[1]) annotation(
+//  Line(points = {{-70, 8}, {-50, 8}, {-50, -14}, {60, -14}}, color = {0, 0, 127}));
+      connect(body1.frame_a, p.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -16}}, color = {95, 95, 95}));
+      connect(body1.frame_a, v.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -8}, {14, -8}, {14, -16}}, color = {95, 95, 95}));
+      connect(force.frame_b, body1.frame_a) annotation(
+        Line(points = {{-22, 8}, {-11, 8}, {-11, 12}, {0, 12}}, color = {95, 95, 95}));
+      connect(v.v, noise_sampled1.u) annotation(
+        Line(points = {{14, -38}, {14, -50}, {-4, -50}, {-4, -70}, {17, -70}}, color = {0, 0, 127}));
+      connect(sine1.y, force.force) annotation(
+        Line(points = {{-70, 8}, {-44, 8}, {-44, 8}, {-44, 8}}, color = {0, 0, 127}));
+      annotation(
+        experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));
+    end simple_tracking;
+
 
 
 
