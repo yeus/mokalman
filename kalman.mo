@@ -31,17 +31,24 @@ package kalman
         Placement(visible = true, transformation(origin = {14, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Modelica.Mechanics.MultiBody.Sensors.AbsolutePosition p annotation(
         Placement(visible = true, transformation(origin = {-8, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
-  blocks.noise_sampled noise_sampled1[3](samplePeriod = 0.5, variance = {2.0, 2.0, 2.0})  annotation(
+  blocks.noise_sampled noise_sampled1[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0})  annotation(
         Placement(visible = true, transformation(origin = {26, -70}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Modelica.Blocks.Sources.Sine sine1[3](amplitude = {0, 0, 1.0}, freqHz = {1.0, 1.0, 0.1})  annotation(
         Placement(visible = true, transformation(origin = {-82, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  blocks.kalman kalman(dT = 1.0)  annotation(
+  parameter Real sigma_u = 0.1;
+  parameter Real dT = 0.1;
+  parameter Real[2,1] B=[dT * dT * 0.5; dT];
+  blocks.kalman kalman(A = [1, dT; 0, 1], B = B, H = [1, 0; 0, 1], Q = B * transpose(B) * sigma_u * sigma_u, R = [0.5, 0; 0, 0.5], dT = dT, sigma_u = sigma_u)  annotation(
         Placement(visible = true, transformation(origin = {56, -4}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  blocks.noise_sampled noise_sampled2[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0}) annotation(
+        Placement(visible = true, transformation(origin = {27, -45}, extent = {{-7, -7}, {7, 7}}, rotation = 0)));
   equation
-      connect(p.r[3], kalman.z[1]) annotation(
-        Line(points = {{-8, -36}, {-6, -36}, {-6, -40}, {36, -40}, {36, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
-      connect(v.v[3], kalman.z[2]) annotation(
-        Line(points = {{14, -36}, {14, -36}, {14, -44}, {40, -44}, {40, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(p.r, noise_sampled2.u) annotation(
+        Line(points = {{-8, -36}, {-8, -36}, {-8, -46}, {20, -46}, {20, -44}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(noise_sampled2[3].y, kalman.z[1]) annotation(
+        Line(points = {{34, -44}, {36, -44}, {36, -4}, {48, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
+      connect(noise_sampled1[3].y, kalman.z[2]) annotation(
+        Line(points = {{36, -70}, {40, -70}, {40, -4}, {46, -4}, {46, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
       connect(sine1[3].y, kalman.u[1]) annotation(
         Line(points = {{-70, 8}, {-66, 8}, {-66, -6}, {32, -6}, {32, 2}, {48, 2}, {48, 2}}, color = {0, 0, 127}, thickness = 0.5));
 //connect(sine1[3].y, stateSpace1.u[1]) annotation(
@@ -59,6 +66,16 @@ package kalman
       annotation(
         experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));
   end mass_estimate;
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -315,30 +332,25 @@ model kalman "Kalman Filter for Modelica"
     Placement(visible = true, transformation(origin = {-92, 68}, extent = {{-12, -12}, {12, 12}}, rotation = 0), iconTransformation(origin = {-84, 58}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
   Modelica.Blocks.Interfaces.RealVectorInput z[nz] "input of measurements)" annotation(
     Placement(visible = true, transformation(origin = {-91, -1}, extent = {{-13, -13}, {13, 13}}, rotation = 0), iconTransformation(origin = {-84, 0}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
-  Modelica.Blocks.Interfaces.RealOutput y[nx] annotation(
+  Modelica.Blocks.Interfaces.RealOutput x[nx] "state" annotation(
     Placement(visible = true, transformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   parameter Real A[:, size(A, 1)]=[1, dT; 0, 1]
     "Matrix A of state space model (e.g., A=[1, 0; 0, 1])";
   parameter Real B[size(A, 1), :]=[dT*dT*0.5; dT]
     "Matrix B of state space model (e.g., B=[1; 1])";
-  parameter Real C[:, size(A, 1)]=[1, 0]
-    "Matrix C of state space model (e.g., C=[1, 1])";
-  parameter Real D[size(C, 1), size(B, 2)]=zeros(size(C, 1), size(B, 2))
-    "Matrix D of state space model";
   parameter Real sigma_u = 0.1;
   parameter Real Q[nx,nx]=B*transpose(B)*sigma_u*sigma_u "process covariance"; 
   Real P[nx,nx](start=identity(nx)) "State Covariance";
-  parameter Real H[nx,nz]=[1,0;0,1] "measurement function";
-  Real x[nx] "state";
+  parameter Real H[:,size(H,1)]=[1,0;0,1] "measurement function";
   Real xp[nx] "prior state";
+  Real y[nz] "residual";
   Real K[nx,nx] "Kalman Gain";
   parameter Real R[nz,nz]=[0.5,0;0,0.5] "Noise Covariance (corresponding to z)";
   Real S[nz,nz] "system uncertainty ";
 protected
-  parameter Integer nz = 2 "number of measurements";
+  parameter Integer nz = size(H, 1) "number of measurements";
   parameter Integer nu = size(B, 2);
   parameter Integer nx = size(A, 1) "number of states";
-  parameter Integer ny = size(C, 1) "number of outputs";
   parameter Real startTime = 1.0;
   protected output Boolean sampleTrigger "True, if sample time instant";
   protected output Boolean firstTrigger "Rising edge signals first sample";
@@ -365,6 +377,16 @@ equation
 
 <pre style=\"margin-top: 0px; margin-bottom: 0px;\"><!--StartFragment--><span style=\"font-family: 'DejaVu Sans Mono'; font-size: 12pt;\">  </span><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#009600;\">//https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.cont2discrete.html</span><!--EndFragment--></pre></pre></body></html>"));
 end kalman;
+
+
+
+
+
+
+
+
+
+
 
 
 
