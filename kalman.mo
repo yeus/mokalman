@@ -2,6 +2,88 @@ package kalman
   model kalman_discrete
   end kalman_discrete;
 
+  package system_examples
+    extends Modelica.Icons.Example;
+
+model moving_body "body moving example"
+  inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity) annotation(
+    Placement(visible = true, transformation(origin = {-64, 48}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Mechanics.MultiBody.Forces.WorldForce force annotation(
+    Placement(visible = true, transformation(origin = {-32, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Mechanics.MultiBody.Parts.Body body1(m = 1) annotation(
+    Placement(visible = true, transformation(origin = {10, 12}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Mechanics.MultiBody.Sensors.AbsoluteVelocity v annotation(
+    Placement(visible = true, transformation(origin = {14, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
+  Modelica.Mechanics.MultiBody.Sensors.AbsolutePosition p annotation(
+    Placement(visible = true, transformation(origin = {-8, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
+  blocks.add_noise add_noise1[3](sigma = 3.0)  annotation(
+        Placement(visible = true, transformation(origin = {40, -62}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Blocks.Interfaces.RealInput u[3] annotation(
+        Placement(visible = true, transformation(origin = {-104, 8}, extent = {{-20, -20}, {20, 20}}, rotation = 0), iconTransformation(origin = {-98, 6}, extent = {{-20, -20}, {20, 20}}, rotation = 0)));
+    equation
+      connect(u, force.force) annotation(
+        Line(points = {{-104, 8}, {-44, 8}}, color = {0, 0, 127}));
+      connect(v.v, add_noise1.u) annotation(
+        Line(points = {{14, -36}, {14, -36}, {14, -62}, {28, -62}, {28, -62}}, color = {0, 0, 127}, thickness = 0.5));
+//connect(sine1[3].y, stateSpace1.u[1]) annotation(
+//  Line(points = {{-70, 8}, {-50, 8}, {-50, -14}, {60, -14}}, color = {0, 0, 127}));
+      connect(body1.frame_a, p.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -16}}, color = {95, 95, 95}));
+      connect(body1.frame_a, v.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -8}, {14, -8}, {14, -16}}, color = {95, 95, 95}));
+      connect(force.frame_b, body1.frame_a) annotation(
+        Line(points = {{-22, 8}, {-11, 8}, {-11, 12}, {0, 12}}, color = {95, 95, 95}));
+      annotation(
+    experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2),
+    Documentation(info = "<html><head></head><body>This example demonstrates estimation of the mass<div>of a body through only velocity measurements</div></body></html>"));
+end moving_body;
+
+
+
+
+
+    model moving_body2 "body moving example"
+      inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity) annotation(
+        Placement(visible = true, transformation(origin = {-64, 48}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Mechanics.MultiBody.Forces.WorldForce force annotation(
+        Placement(visible = true, transformation(origin = {-32, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Mechanics.MultiBody.Parts.Body body1(m = 1) annotation(
+        Placement(visible = true, transformation(origin = {10, 12}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      Modelica.Mechanics.MultiBody.Sensors.AbsoluteVelocity v annotation(
+        Placement(visible = true, transformation(origin = {14, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
+      Modelica.Mechanics.MultiBody.Sensors.AbsolutePosition p annotation(
+        Placement(visible = true, transformation(origin = {-8, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
+      blocks.noise_sampled noise_sampled1[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0}) annotation(
+        Placement(visible = true, transformation(origin = {26, -70}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      kalman.blocks.noise_sampled noise_sampled2[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0}) annotation(
+        Placement(visible = true, transformation(origin = {-37, -47}, extent = {{7, -7}, {-7, 7}}, rotation = 0)));
+      Modelica.Blocks.Sources.Sine u[3](amplitude = {0, 0, 1.0}, freqHz = {1.0, 1.0, 0.1}) annotation(
+        Placement(visible = true, transformation(origin = {-82, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      parameter Real dT = 1.0;
+    equation
+      connect(p.r, noise_sampled2.u) annotation(
+        Line(points = {{-8, -36}, {-8, -46}, {-31, -46}, {-31, -47}}, color = {0, 0, 127}, thickness = 0.5));
+//connect(sine1[3].y, stateSpace1.u[1]) annotation(
+//  Line(points = {{-70, 8}, {-50, 8}, {-50, -14}, {60, -14}}, color = {0, 0, 127}));
+      connect(body1.frame_a, p.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -16}}, color = {95, 95, 95}));
+      connect(body1.frame_a, v.frame_a) annotation(
+        Line(points = {{0, 12}, {-8, 12}, {-8, -8}, {14, -8}, {14, -16}}, color = {95, 95, 95}));
+      connect(force.frame_b, body1.frame_a) annotation(
+        Line(points = {{-22, 8}, {-11, 8}, {-11, 12}, {0, 12}}, color = {95, 95, 95}));
+      connect(v.v, noise_sampled1.u) annotation(
+        Line(points = {{14, -38}, {14, -50}, {-4, -50}, {-4, -70}, {17, -70}}, color = {0, 0, 127}));
+      connect(u.y, force.force) annotation(
+        Line(points = {{-70, 8}, {-44, 8}, {-44, 8}, {-44, 8}}, color = {0, 0, 127}));
+      annotation(
+        experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2),
+        Documentation(info = "<html><head></head><body>This example demonstrates estimation of the mass<div>of a body through only velocity measurements</div></body></html>"));
+    end moving_body2;
+
+
+
+  end system_examples;
+
   package Examples
     extends Modelica.Icons.Example;
 
@@ -19,7 +101,7 @@ package kalman
     annotation(
         experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));end rigid_body_states;
 
-  model mass_estimate "estimate mass of a body"
+  model ukf_tracking "track body using ukf"
       inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity)  annotation(
         Placement(visible = true, transformation(origin = {-64, 48}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
       Modelica.Mechanics.MultiBody.Forces.WorldForce force annotation(
@@ -33,19 +115,18 @@ package kalman
         Placement(visible = true, transformation(origin = {-8, -26}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   blocks.noise_sampled noise_sampled1[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0})  annotation(
         Placement(visible = true, transformation(origin = {26, -70}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Modelica.Blocks.Sources.Sine sine1[3](amplitude = {0, 0, 1.0}, freqHz = {1.0, 1.0, 0.1})  annotation(
-        Placement(visible = true, transformation(origin = {-82, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  parameter Real sigma_u = 0.1;
-  parameter Real dT = 2.0;
-  parameter Real[2,1] B=[dT * dT * 0.5; dT];
-  blocks.kalman kalman(A = [1, dT; 0, 1], B = B, H = [0, 1], Q = B * transpose(B) * sigma_u * sigma_u, R = [0.5], dT = dT, sigma_u = sigma_u)  annotation(
-        Placement(visible = true, transformation(origin = {56, -4}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   blocks.noise_sampled noise_sampled2[3](samplePeriod = dT, variance = {2.0, 2.0, 2.0}) annotation(
         Placement(visible = true, transformation(origin = {27, -45}, extent = {{-7, -7}, {7, 7}}, rotation = 0)));
+  
+  Modelica.Blocks.Sources.Sine sine1[3](amplitude = {0, 0, 1.0}, freqHz = {1.0, 1.0, 0.1})  annotation(
+        Placement(visible = true, transformation(origin = {-82, 8}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  parameter Real dT = 1.0;
+  blocks.ukf kalman annotation(
+        Placement(visible = true, transformation(origin = {56, -4}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   equation
       connect(p.r, noise_sampled2.u) annotation(
         Line(points = {{-8, -36}, {-8, -36}, {-8, -46}, {20, -46}, {20, -44}}, color = {0, 0, 127}, thickness = 0.5));
-      connect(noise_sampled1[3].y, kalman.z[1]) annotation(
+      connect(noise_sampled1[3].y, kalman.z[2]) annotation(
         Line(points = {{36, -70}, {40, -70}, {40, -4}, {46, -4}, {46, -4}, {48, -4}}, color = {0, 0, 127}, thickness = 0.5));
       connect(sine1[3].y, kalman.u[1]) annotation(
         Line(points = {{-70, 8}, {-66, 8}, {-66, -6}, {32, -6}, {32, 2}, {48, 2}, {48, 2}}, color = {0, 0, 127}, thickness = 0.5));
@@ -64,7 +145,15 @@ package kalman
       annotation(
         experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2),
         Documentation(info = "<html><head></head><body>This example demonstrates estimation of the mass<div>of a body through only velocity measurements</div></body></html>"));
-  end mass_estimate;
+  end ukf_tracking;
+
+
+
+
+
+
+
+
 
 
 
@@ -340,41 +429,132 @@ signal <b>u</b> exceeds the <b>reference</b> signal plus half of the bandwidth.<
 
     model gauss_noise "noise_sampled TODO: noch eine normal-distribution erzuegen (Box-Muller oder ziggurat)"
       extends Modelica.Blocks.Interfaces.SO;
-      parameter Real amplitude = 1.0;
-      parameter Real seed = 0.0;
-      constant Real m = 111.11 "int(2 ^ 31 - 1)";
+      parameter Real mu = 0.0;
+      parameter Real sigma = 1.0;
+      parameter Real seed = 99.0;
+      parameter Real pi = Modelica.Constants.pi;
 
       function rand
         input Real t;
         input Real seed;
         output Real r;
       protected
-        Integer x;
+        Real x;
         constant Integer m = 2147483647 "int(2 ^ 31 - 1)";
         constant Integer a = 16807 "7 ^ 5";
       algorithm
-        x := t * seed + t + 500;
+        x := t * seed+t+500;
         for i in 1:3 loop
-          //use Xorshift here instead?
-          x := mod(x * x, m);
+          x := mod(x*x*a,m);
         end for;
-        r := x/m;
+        r := x / m;
       end rand;
+    protected
+      Real u,v,z0 "random variables";
     equation
-      y = (rand(time * m, seed) - 0.5) * amplitude;
+      u = rand(time*111,seed)+0.000000001; //so we don't get log(0)
+      v = rand(time*111,seed+10);
+      z0 = sqrt(-2 * log(u))*cos(2*pi*v);
+      y = z0*sigma + mu;
       annotation(
         x(flags = 2),
         y(flags = 2),
         Icon(coordinateSystem(extent = {{-101.7, -51.7}, {101.7, 51.7}}), graphics = {Rectangle(lineColor = {0, 0, 0}, fillColor = {255, 255, 255}, fillPattern = FillPattern.Solid, extent = {{-80, 56.7}, {53.3, -40}}), Line(points = {{-70, -20}, {-66.7, 20}, {-66.7, -3.3}, {-63.3, 3.3}, {-63.3, 0}, {-63.3, 10}, {-60, -3.3}, {-56.7, 16.7}, {-56.7, -13.3}, {-53.3, 36.7}, {-50, -3.3}, {-50, 10}, {-46.7, -10}, {-43.3, 6.7}, {-43.3, -3.3}, {-36.7, -23.3}, {-36.7, -10}, {-33.3, -3.3}, {-30, -10}, {-30, -3.3}, {-30, 30}, {-26.7, 30}, {-20, 6.7}, {-20, -13.3}, {-16.7, -16.7}, {-16.7, 3.3}, {-13.3, -10}, {-13.3, 3.3}, {-13.3, -16.7}, {-13.3, 43.3}, {-10, -16.7}, {-6.7, -6.7}, {-6.7, -13.3}, {-3.3, 16.7}, {-3.3, -3.3}, {-3.3, 3.3}, {0, -10}, {3.3, -13.3}, {6.7, 23.3}, {10, 6.7}, {13.3, 0}, {16.7, -6.7}, {16.7, -16.7}, {16.7, -3.3}, {20, -23.3}, {23.3, -6.7}, {23.3, -3.3}, {33.3, -23.3}, {33.3, 6.7}, {36.7, 6.7}, {40, 10}, {43.3, 46.7}, {40, -10}, {40, -13.3}, {43.3, 0}, {46.7, 10}, {50, -6.7}, {50, 3.3}, {53.3, 13.3}}, color = {0, 0, 0})}),
-        experiment(StopTime = 1, StartTime = 0),
-        Documentation(info = "<html>
-for further information look here:
+        experiment(StopTime = 10, StartTime = 0, Tolerance = 1e-6, Interval = 0.02),
+        Documentation(info = "<html><head></head><body>for further information look here:
 
-<a href=https://en.wikipedia.org/wiki/Linear_congruential_generator>Linear congruential generator</a>
+<a href=\"https://en.wikipedia.org/wiki/Linear_congruential_generator\">Linear congruential generator</a>
 
 https://en.wikipedia.org/wiki/List_of_random_number_generators
-</html>"));
+<div><br></div><div><div>#box-muller transform to generate a normal distribution</div><div>#https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform#Implementation</div><div>#ziffurat method to complex to implement (at least for me right now)&nbsp;</div></div></body></html>"));
     end gauss_noise;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 model kalman "Kalman Filter for Modelica"
   import Modelica.Math.Matrices.*;
@@ -552,6 +732,7 @@ end kalman;
 
 
 
+
     model kalman_continuos
       //https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.cont2discrete.html
       //parameter Integer nz = 1 "number of states";
@@ -587,78 +768,103 @@ end kalman;
         Icon(graphics = {Text(origin = {27, -31}, lineColor = {144, 149, 7}, fillColor = {222, 222, 222}, extent = {{-83, 95}, {55, -33}}, textString = "K", textStyle = {TextStyle.Bold}), Rectangle(origin = {0, 2}, extent = {{-84, 82}, {84, -82}}), Text(origin = {-48, 13}, extent = {{-20, 9}, {20, -31}}, textString = "z"), Text(origin = {-48, 71}, extent = {{-20, 9}, {20, -31}}, textString = "u")}, coordinateSystem(initialScale = 0.1)));
     end kalman_continuos;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    model ukf "Unscented Kalman Filter according to: https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python/blob/master/10-Unscented-Kalman-Filter.ipynb"
+      import Modelica.Math.Matrices.*;
+      parameter Real dT = 1.0 "sample period";
+      Modelica.Blocks.Interfaces.RealVectorInput u[nu] "input of control vector" annotation(
+        Placement(visible = true, transformation(origin = {-92, 68}, extent = {{-12, -12}, {12, 12}}, rotation = 0), iconTransformation(origin = {-84, 58}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
+      Modelica.Blocks.Interfaces.RealVectorInput z[nz] "input of measurements)" annotation(
+        Placement(visible = true, transformation(origin = {-91, -1}, extent = {{-13, -13}, {13, 13}}, rotation = 0), iconTransformation(origin = {-84, 0}, extent = {{-12, -12}, {12, 12}}, rotation = 0)));
+      Modelica.Blocks.Interfaces.RealOutput x[nx] "state" annotation(
+        Placement(visible = true, transformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0), iconTransformation(origin = {94, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+      parameter Real A[:, size(A, 1)] = [1, dT; 0, 1] "Matrix A of state space model (e.g., A=[1, 0; 0, 1])";
+      parameter Real B[size(A, 1), :] = [dT * dT * 0.5; dT] "Matrix B of state space model (e.g., B=[1; 1])";
+      parameter Real sigma_u = 0.1;
+      parameter Real Q[nx, nx] = B * transpose(B) * sigma_u * sigma_u "process covariance";
+      Real P[nx, nx](start = identity(nx)) "State Covariance";
+      parameter Real H[:, size(H, 1)] = [1, 0; 0, 1] "measurement function";
+      Real xp[nx] "prior state";
+      Real y[nz] "residual";
+      Real K[nx, nz] "Kalman Gain";
+      parameter Real R[nz, nz] = [0.5, 0; 0, 0.5] "Noise Covariance (corresponding to z)";
+      Real S[nz, nz] "system uncertainty ";
+      parameter Real n = 4 "number of dimenstions";
+      parameter Real alpha =0.1, kappa = -1, beta = 2.0;
+      
+      function f_cv "non-linear state transition function for UKF" 
+        input Real x[nx];
+        input Real dt;
+        output Real X[nx];
+        algorithm
+         X := A*x;
+      end f_cv;
+      
+      function h_cv "measurement function" 
+        input Real x[nx];
+        output Real X[nx];
+        algorithm
+         X := x;
+      end h_cv;
+      
+    protected
+      parameter Integer nz = size(H, 1) "number of measurements";
+      parameter Integer nu = size(B, 2);
+      parameter Integer nx = size(A, 1) "number of states";
+      parameter Real startTime = 1.0;
+    protected
+      output Boolean sampleTrigger "True, if sample time instant";
+    protected
+      output Boolean firstTrigger "Rising edge signals first sample";
+    equation
+      sampleTrigger = sample(startTime, dT);
+    algorithm
+      when sampleTrigger then
+        firstTrigger := time <= startTime + 0.5 * dT;
+        xp := A * pre(x) + B * u;
+        P := A * pre(P) * transpose(A) + Q "State Covariance prediction";
+        y := z - H * xp;
+        S := H * P * transpose(H) + R;
+        K := P * transpose(H) * inv(S);
+        x := xp + K * y;
+        P := (identity(nx) - K * H) * P;
+      end when;
+//prediction
+//y := C*pre(x) + D*u;
+//measurement update
+// residual
+//state update
+//update of covariance
+      annotation(
+        Icon(graphics = {Text(origin = {27, -31}, lineColor = {144, 149, 7}, fillColor = {222, 222, 222}, extent = {{-83, 95}, {55, -33}}, textString = "K", textStyle = {TextStyle.Bold}), Rectangle(origin = {0, 2}, extent = {{-84, 82}, {84, -82}}), Text(origin = {-48, 13}, extent = {{-20, 9}, {20, -31}}, textString = "z"), Text(origin = {-48, 71}, extent = {{-20, 9}, {20, -31}}, textString = "u")}, coordinateSystem(initialScale = 0.1)),
+        Documentation(info = "<html><head></head><body>
+<pre style=\"margin-top: 0px; margin-bottom: 0px;\"><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\">implementation according to:</span></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\"><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\"><br></span></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\"><!--StartFragment--><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\">https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python/blob/master/06-Multivariate-Kalman-Filters.ipynb</span><!--EndFragment--></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\"><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#008b00;\"><br></span></pre><pre style=\"margin-top: 0px; margin-bottom: 0px;\">
+
+<pre style=\"margin-top: 0px; margin-bottom: 0px;\"><!--StartFragment--><span style=\"font-family: 'DejaVu Sans Mono'; font-size: 12pt;\">  </span><span style=\" font-family:'DejaVu Sans Mono'; font-size:12pt; color:#009600;\">//https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.cont2discrete.html</span><!--EndFragment--></pre></pre></body></html>"));
+    end ukf;
+
+    model add_noise
+      extends Modelica.Blocks.Interfaces.SISO;
+      parameter Real sigma=1.0;
+      parameter Integer seed=999;
+      gauss_noise noise(sigma = sigma, seed = seed)  annotation(
+        Placement(visible = true, transformation(origin = {-46, 54}, extent = {{-10.17, -5.17}, {10.17, 5.17}}, rotation = 0)));
+  Modelica.Blocks.Math.Add add annotation(
+        Placement(visible = true, transformation(origin = {8, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  equation
+      connect(add.y, y) annotation(
+        Line(points = {{20, 0}, {102, 0}, {102, 0}, {110, 0}}, color = {0, 0, 127}));
+      connect(noise.y, add.u1) annotation(
+        Line(points = {{-34, 54}, {-26, 54}, {-26, 6}, {-4, 6}, {-4, 6}}, color = {0, 0, 127}));
+      connect(u, add.u2) annotation(
+        Line(points = {{-120, 0}, {-46, 0}, {-46, -6}, {-4, -6}, {-4, -6}}, color = {0, 0, 127}));
+    
+    end add_noise;
 
 
 
 
   annotation(dateModified = "2014-04-17 11:12:16Z");
 end blocks;
-
-
   annotation(
     uses(Modelica(version = "3.2.1")));
 end kalman;
