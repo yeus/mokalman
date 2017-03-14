@@ -121,12 +121,16 @@ parameter Real[3] om(start={0.2, 0.1, 0.5});
 parameter Real[3,3] I=[m * (3*r*r+h*h) / 12.0,0,0; 0,m * (3*r*r+h*h) / 12.0,0; 0,0,.5*m * r * r];
   system_examples.rotation_system rotation_system1(om(start=om), I=I) annotation(
         Placement(visible = true, transformation(origin = {-30, -28}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-
+  parameter Real[3] tau = {0.0,0.0,0.0};
 equation
+  rotation_system1.tau = tau;
   connect(fixedTranslation1.frame_b, body1.frame_a) annotation(
     Line(points = {{-6, 26}, {20, 26}, {20, 26}, {20, 26}}, color = {95, 95, 95}));
 annotation(
     experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));end rigid_body_states;
+
+
+
 
 
 
