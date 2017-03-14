@@ -80,6 +80,25 @@ end moving_body;
         Documentation(info = "<html><head></head><body>This example demonstrates estimation of the mass<div>of a body through only velocity measurements</div></body></html>"));
     end moving_body2;
 
+model rotation_system "rotating body"
+  import Modelica.Math.Matrices.*;
+  Real[3] om(start={0.1, 0.2, 0.3});
+  input Real[3] tau "attacking torque";
+  parameter Real[3,3] I=[1,0,0;0,1,0;0,0,1] "inertia matrix";
+equation
+  der(om) = inv(I)*(tau-cross(om,I*om));
+end rotation_system;
+
+
+
+
+
+
+
+
+
+
+
 
 
   end system_examples;
@@ -87,19 +106,56 @@ end moving_body;
   package Examples
     extends Modelica.Icons.Example;
 
-    model rigid_body_states "https://en.wikipedia.org/wiki/Rigid_body_dynamics#Rotation_in_three_dimensions"
-      inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity)  annotation(
-        Placement(visible = true, transformation(origin = {-70, 60}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-      Modelica.Mechanics.MultiBody.Parts.Body body1(v_0(start = {0.1, 0.2, 0.3}), w_a(start = {0.0, 0.0, 0.3}))  annotation(
-        Placement(visible = true, transformation(origin = {30, 26}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Modelica.Mechanics.MultiBody.Parts.FixedTranslation fixedTranslation1(r = {1, 0, 0})  annotation(
-        Placement(visible = true, transformation(origin = {-16, 26}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  equation
-      connect(fixedTranslation1.frame_b, body1.frame_a) annotation(
-        Line(points = {{-6, 26}, {20, 26}, {20, 26}, {20, 26}}, color = {95, 95, 95}));
-    
-    annotation(
-        experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));end rigid_body_states;
+model rigid_body_states "https://en.wikipedia.org/wiki/Rigid_body_dynamics#Rotation_in_three_dimensions"
+  import Modelica.Math.Matrices.*;
+  inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity)  annotation(
+    Placement(visible = true, transformation(origin = {-70, 60}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  parameter Real r = 1.0 "radius of body";
+  parameter Real m = 1.0 "mass of body";
+  parameter Real h = 2.0 "height of body";
+  Modelica.Mechanics.MultiBody.Parts.Body body1(I_11 = I[1,1], I_21 = 0, I_22 = I[2, 2], I_31 = 0, I_32 = 0, I_33 = I[3,3], useQuaternions = true, w_a(start = om))  annotation(
+    Placement(visible = true, transformation(origin = {30, 26}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+Modelica.Mechanics.MultiBody.Parts.FixedTranslation fixedTranslation1(r = {1, 0, 0})  annotation(
+    Placement(visible = true, transformation(origin = {-16, 26}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+parameter Real[3] om(start={0.2, 0.1, 0.5});
+parameter Real[3,3] I=[m * (3*r*r+h*h) / 12.0,0,0; 0,m * (3*r*r+h*h) / 12.0,0; 0,0,.5*m * r * r];
+  system_examples.rotation_system rotation_system1(om(start=om), I=I) annotation(
+        Placement(visible = true, transformation(origin = {-30, -28}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+
+equation
+  connect(fixedTranslation1.frame_b, body1.frame_a) annotation(
+    Line(points = {{-6, 26}, {20, 26}, {20, 26}, {20, 26}}, color = {95, 95, 95}));
+annotation(
+    experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));end rigid_body_states;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   model ukf_tracking "track body using ukf"
       inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity)  annotation(
