@@ -101,6 +101,7 @@ end rotation_system;
 
 
 
+
   end system_examples;
 
   package Examples
@@ -108,26 +109,63 @@ end rotation_system;
 
 model rigid_body_states "https://en.wikipedia.org/wiki/Rigid_body_dynamics#Rotation_in_three_dimensions"
   import Modelica.Math.Matrices.*;
+  import D2R = Modelica.Constants.D2R;
   inner Modelica.Mechanics.MultiBody.World world(gravityType = Modelica.Mechanics.MultiBody.Types.GravityTypes.NoGravity)  annotation(
     Placement(visible = true, transformation(origin = {-70, 60}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  parameter Real r = 1.0 "radius of body";
-  parameter Real m = 1.0 "mass of body";
-  parameter Real h = 2.0 "height of body";
-  Modelica.Mechanics.MultiBody.Parts.Body body1(I_11 = I[1,1], I_21 = 0, I_22 = I[2, 2], I_31 = 0, I_32 = 0, I_33 = I[3,3], useQuaternions = true, w_a(start = om))  annotation(
-    Placement(visible = true, transformation(origin = {30, 26}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-Modelica.Mechanics.MultiBody.Parts.FixedTranslation fixedTranslation1(r = {1, 0, 0})  annotation(
-    Placement(visible = true, transformation(origin = {-16, 26}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-parameter Real[3] om(start={0.2, 0.1, 0.5});
-parameter Real[3,3] I=[m * (3*r*r+h*h) / 12.0,0,0; 0,m * (3*r*r+h*h) / 12.0,0; 0,0,.5*m * r * r];
-  system_examples.rotation_system rotation_system1(om(start=om), I=I) annotation(
-        Placement(visible = true, transformation(origin = {-30, -28}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  parameter Real[3] tau = {0.0,0.0,0.0};
-equation
-  rotation_system1.tau = tau;
-  connect(fixedTranslation1.frame_b, body1.frame_a) annotation(
-    Line(points = {{-6, 26}, {20, 26}, {20, 26}, {20, 26}}, color = {95, 95, 95}));
-annotation(
+  parameter Real w0[3] = {0.4, 0.1, 0} * D2R;
+  parameter Real I0[3] = {0.3,0.4,0.8};
+  Modelica.Mechanics.MultiBody.Parts.Body body1(I_11 = I0[1], I_22 = I0[2], I_33 = I0[3], angles_fixed = false,r_0(start = {0, 1, 2}), v_0(start = {1, 2, 3}), w_0_start = w0)  annotation(
+        Placement(visible = true, transformation(origin = {2, 2}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Mechanics.MultiBody.Sensors.AbsoluteSensor ideal_sensor(get_a = true, get_angles = true, get_r = true, get_v = true, get_w = true, get_z = false)  annotation(
+        Placement(visible = true, transformation(origin = {2, -28}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Real[4] Q(start={0.65328148, -0.27059805,  0.27059805,  0.65328148});
+    equation
+      Q = body1.Q;
+      connect(body1.frame_a, ideal_sensor.frame_a) annotation(
+        Line(points = {{-8, 2}, {-28, 2}, {-28, -28}, {-8, -28}, {-8, -28}}, color = {95, 95, 95}));
+      annotation(
     experiment(StartTime = 0, StopTime = 100, Tolerance = 1e-6, Interval = 0.2));end rigid_body_states;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
